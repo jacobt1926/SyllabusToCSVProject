@@ -1,159 +1,163 @@
-import apiKeys from "./hidden.js";
-const geminiApiKey = apiKeys.geminiApiKey;
-const claudeApiKey = apiKeys.claudeApiKey;
+const API_URL = "https://api.anthropic.com/v1/messages";
+const MODEL = "claude-sonnet-5-5";
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const KEY_STORAGE = "masterlistAnthropicApiKey";
 
-// Helper function to create and download the resulting CSV file
-function createFileAndDownload(filename, content) {
-    const blob = new Blob([content], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+const fileInput = document.getElementById("file_input");
+const fileName = document.getElementById("file_name");
+const apiKeyInput = document.getElementById("api_key");
+const rememberKey = document.getElementById("remember_key");
+const convertButton = document.getElementById("convert");
+const statusBox = document.getElementById("status");
+const dropZone = document.getElementById("drop_zone");
+
+function showStatus(message, type) {
+  statusBox.textContent = message;
+  statusBox.className = `status show ${type}`;
 }
 
-/**
- * Sends a PDF file directly to Claude's API to extract all text/content.
- * 
- * @param {FormData} form 
- * @returns {Promise<string>} The extracted text content
- */
-async function PDFToJson(form) {
-    const file = form.get("file");
-    if (!file) throw new Error("No PDF file found in form data.");
-
-    const arrayBuffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    const base64Data = btoa(binary);
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-            "x-api-key": claudeApiKey,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-            "dangerously-allow-browser": "true"
-        },
-        body: JSON.stringify({
-            model: "claude-3-5-sonnet-20241022",
-            max_tokens: 4096,
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        {
-                            type: "document",
-                            source: {
-                                type: "base64",
-                                media_type: "application/pdf",
-                                data: base64Data
-                            }
-                        },
-                        {
-                            type: "text",
-                            text: "Extract all text and content from this syllabus document accurately and completely."
-                        }
-                    ]
-                }
-            ]
-        })
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Claude API Error: ${errorData.error?.message || response.statusText}`);
-    }
-
-    const result = await response.json();
-    return result.content[0].text;
+function resetStatus() {
+  statusBox.textContent = "";
+  statusBox.className = "status";
 }
 
-/**
- * Sends extracted syllabus text to Claude to generate a structured CSV.
- * 
- * @param {string} markdownExport 
- * @returns {Promise<string>} Clean CSV string
- */
-async function JsonToCSV(markdownExport) {
-    if (!markdownExport) throw new Error("No syllabus content provided.");
+chrome.storage?.local.get(KEY_STORAGE, (stored) => {
+  if (chrome.runtime.lastError) return;
+  if (stored[KEY_STORAGE]) {
+    apiKeyInput.value = stored[KEY_STORAGE];
+    rememberKey.checked = true;
+  }
+});
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-            "x-api-key": claudeApiKey,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-            "dangerously-allow-browser": "true"
-        },
-        body: JSON.stringify({
-            model: "claude-3-5-sonnet-20241022",
-            max_tokens: 4096,
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        {
-                            type: "text",
-                            text: `Extract all assignments from the following syllabus content into CSV format.
+document.getElementById("toggle_key").addEventListener("click", (event) => {
+  const visible = apiKeyInput.type === "password";
+  apiKeyInput.type = visible ? "text" : "password";
+  event.currentTarget.textContent = visible ? "Hide" : "Show";
+});
 
-Use EXACTLY these column headers:
-Due Date, Class, Assignment Name, Assignment Type, Checkbox
+rememberKey.addEventListener("change", () => {
+  if (rememberKey.checked && apiKeyInput.value.trim()) {
+    chrome.storage.local.set({ [KEY_STORAGE]: apiKeyInput.value.trim() });
+  } else {
+    chrome.storage.local.remove(KEY_STORAGE);
+  }
+});
 
-Rules:
-- Default 'Checkbox' column value to false for all rows.
-- Output ONLY pure, valid CSV data.
-- Do NOT include markdown code fences (\`\`\`csv), headers, or extra conversational text.
+apiKeyInput.addEventListener("input", () => {
+  if (rememberKey.checked) chrome.storage.local.set({ [KEY_STORAGE]: apiKeyInput.value.trim() });
+});
 
-Syllabus Content:
-${markdownExport}`
-                        }
-                    ]
-                }
-            ]
-        })
-    });
+fileInput.addEventListener("change", () => {
+  resetStatus();
+  fileName.textContent = fileInput.files[0]?.name ?? "";
+});
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Claude API Error: ${errorData.error?.message || response.statusText}`);
-    }
+for (const eventName of ["dragenter", "dragover"]) {
+  dropZone.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    dropZone.classList.add("drag");
+  });
+}
+for (const eventName of ["dragleave", "drop"]) {
+  dropZone.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    dropZone.classList.remove("drag");
+  });
+}
+dropZone.addEventListener("drop", (event) => {
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  const transfer = new DataTransfer();
+  transfer.items.add(file);
+  fileInput.files = transfer.files;
+  fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+});
 
-    const result = await response.json();
-    const rawCsv = result.content[0].text;
-    
-    // Clean code blocks if present
-    return rawCsv.replace(/```csv|```/g, "").trim();
+function toBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
+    reader.onerror = () => reject(new Error("The PDF could not be read. Try selecting it again."));
+    reader.readAsDataURL(file);
+  });
 }
 
-// Complete Event Listener Flow
-document.getElementById("file_input").addEventListener("change", async (event) => {
-    const fileUploaded = event.target.files[0];
-    if (!fileUploaded) {
-        return;
-    }    
+function csvSafeName(name) {
+  return name.replace(/\.pdf$/i, "").replace(/[^\w-]+/g, "-").replace(/^-|-$/g, "") || "syllabus";
+}
 
-    try {
-        // 1. Prepare form data with uploaded PDF
-        const form = new FormData();
-        form.append('purpose', 'ocr');
-        form.append('file', new File([fileUploaded], `${fileUploaded.name}`));
+function downloadCsv(filename, content) {
+  const blob = new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
-        // 2. Process PDF to extract text content
-        const markdownContent = await PDFToJson(form);
+async function extractAssignments(file, apiKey) {
+  const base64 = await toBase64(file);
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 8192,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+          { type: "text", text: `Read this course syllabus and extract every assignment, exam, quiz, project, reading, and other dated course task. Return only valid CSV with exactly these columns, in this order: Due Date, Class, Assignment Name, Assignment Type, Checkbox. Use the syllabus course name for Class when available; leave unknown due dates blank; use ISO YYYY-MM-DD dates only when the year is clear from the document; otherwise preserve the stated month and day. Set Checkbox to false for each row. Quote and escape CSV fields correctly. Do not include markdown fences or explanatory text. If no assignments can be found, return only the header row.` },
+        ],
+      }],
+    }),
+  });
 
-        // 3. Send text to Claude to generate CSV rows
-        const csvData = await JsonToCSV(markdownContent);
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = result.error?.message || `Anthropic returned an error (${response.status}).`;
+    if (response.status === 401) throw new Error("That API key was not accepted. Check it and try again.");
+    if (response.status === 413) throw new Error("This PDF is too large to send. Try a smaller file.");
+    throw new Error(message);
+  }
+  const csv = result.content?.filter((part) => part.type === "text").map((part) => part.text).join("\n").trim();
+  if (!csv) throw new Error("No CSV came back. Try another syllabus or check the API response.");
+  const cleaned = csv.replace(/^```(?:csv)?\s*/i, "").replace(/\s*```$/, "").trim();
+  const header = cleaned.split(/\r?\n/, 1)[0].replace(/^\uFEFF/, "").trim();
+  if (header !== "Due Date, Class, Assignment Name, Assignment Type, Checkbox") {
+    throw new Error("The response was not a valid assignment CSV. Please try again.");
+  }
+  return cleaned;
+}
 
-        // 4. Trigger download of assignments.csv
-        createFileAndDownload("downloadable.csv", csvData);
-    } catch (err) {
-        console.error("Error processing file:", err);
-    }
+convertButton.addEventListener("click", async () => {
+  const file = fileInput.files[0];
+  const apiKey = apiKeyInput.value.trim();
+  resetStatus();
+
+  if (!apiKey) return showStatus("Add your Anthropic API key to get started.", "error");
+  if (!file) return showStatus("Choose a syllabus PDF first.", "error");
+  if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) return showStatus("Please choose a PDF file.", "error");
+  if (file.size > MAX_FILE_SIZE) return showStatus("This PDF is over 20 MB. Choose a smaller file.", "error");
+
+  convertButton.disabled = true;
+  convertButton.textContent = "Reading your syllabus…";
+  showStatus("Extracting assignments from your PDF. This can take a little while.", "loading");
+  try {
+    const csv = await extractAssignments(file, apiKey);
+    const rows = csv.split(/\r?\n/).length - 1;
+    downloadCsv(`${csvSafeName(file.name)}-assignments.csv`, csv);
+    showStatus(`Your CSV is ready${rows > 0 ? ` with ${rows} assignment${rows === 1 ? "" : "s"}` : " (no dated assignments were found)"}.`, "success");
+  } catch (error) {
+    showStatus(error instanceof Error ? error.message : "Something went wrong. Please try again.", "error");
+  } finally {
+    convertButton.disabled = false;
+    convertButton.textContent = "Create my CSV";
+  }
 });
