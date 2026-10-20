@@ -1,64 +1,17 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MasterList · Syllabus to CSV</title>
-  <style>
-    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #202b26; background: #f5f7f2; font-synthesis: none; }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-width: 350px; }
-    main { width: min(100%, 480px); margin: 0 auto; padding: 28px 24px 24px; }
-    .brand { display: flex; align-items: center; gap: 11px; margin-bottom: 30px; }
-    .mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; color: white; background: #28785a; font-size: 19px; font-weight: 750; }
-    .brand-name { font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
-    .brand-caption { margin-top: 2px; color: #748078; font-size: 11px; }
-    h1 { margin: 0; font-size: 27px; line-height: 1.12; letter-spacing: -.045em; }
-    .intro { margin: 9px 0 23px; color: #68756d; font-size: 13px; line-height: 1.55; }
-    .field-label { display: block; margin: 0 0 8px; font-size: 12px; font-weight: 650; }
-    .api-row { display: flex; gap: 8px; }
-    input[type="password"], input[type="text"] { min-width: 0; flex: 1; height: 40px; padding: 0 11px; border: 1px solid #dce3dc; border-radius: 9px; outline: none; background: white; color: #202b26; font: inherit; font-size: 12px; }
-    input:focus { border-color: #529575; box-shadow: 0 0 0 3px #d9eee2; }
-    button { border: 0; border-radius: 9px; font: inherit; cursor: pointer; }
-    .secondary { padding: 0 12px; background: #e9eee9; color: #35473d; font-size: 12px; font-weight: 650; }
-    .remember { display: flex; gap: 7px; align-items: center; margin-top: 9px; color: #68756d; font-size: 11px; }
-    .remember input { accent-color: #28785a; }
-    .note { margin: 8px 0 0; color: #879188; font-size: 10px; line-height: 1.45; }
-    .upload { display: block; margin-top: 20px; padding: 20px 16px; border: 1.5px dashed #cbd7cd; border-radius: 13px; background: #fbfcfa; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; }
-    .upload:hover, .upload.drag { border-color: #55a07b; background: #f0f8f2; }
-    .upload-icon { margin-bottom: 8px; color: #438565; font-size: 22px; }
-    .upload strong { display: block; font-size: 12px; }
-    .upload span { display: block; margin-top: 5px; color: #7b877f; font-size: 11px; }
-    .upload input { display: none; }
-    .file-name { min-height: 16px; margin-top: 9px; color: #527261; font-size: 11px; text-align: center; }
-    .primary { width: 100%; height: 43px; margin-top: 7px; background: #28785a; color: white; font-size: 13px; font-weight: 700; transition: background .15s; }
-    .primary:hover { background: #21684d; }
-    .primary:disabled { background: #a9bcb0; cursor: wait; }
-    .status { display: none; margin-top: 13px; padding: 10px 11px; border-radius: 9px; font-size: 11px; line-height: 1.45; }
-    .status.show { display: block; }
-    .status.error { background: #fff0ed; color: #a33d2d; }
-    .status.success { background: #eaf5ed; color: #2d6a48; }
-    .status.loading { background: #eef3ef; color: #4b6355; }
-    .foot { margin: 19px 0 0; color: #879188; font-size: 10px; line-height: 1.5; text-align: center; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EXTENSION NAME</title>
 </head>
 <body>
-  <main>
-    <div class="brand"><div class="mark">M</div><div><div class="brand-name">MasterList</div><div class="brand-caption">Syllabus to assignments</div></div></div>
-    <h1>Your syllabus,<br>ready to plan.</h1>
-    <p class="intro">Upload a course syllabus and turn its assignments into a CSV you can add to your planner.</p>
+    <h1>My super cool extension</h1>
+    
+    <!-- File Input -->
+    <input type="file" id="file-upload" name="filename">
+    <p>Click below to download the CSV!</p>
 
-    <label class="field-label" for="api_key">Claude API key</label>
-    <div class="api-row"><input id="api_key" type="password" autocomplete="off" placeholder="Paste your Anthropic API key"><button class="secondary" id="toggle_key" type="button">Show</button></div>
-    <label class="remember"><input id="remember_key" type="checkbox"> Remember key on this device</label>
-    <p class="note">Your key is sent directly to Anthropic to process the syllabus. It is kept only for this session unless you choose to remember it.</p>
-
-    <label class="upload" id="drop_zone" for="file_input"><div class="upload-icon">↑</div><strong>Choose a syllabus PDF</strong><span>or drag and drop it here · PDF, up to 20 MB</span><input id="file_input" type="file" accept="application/pdf,.pdf"></label>
-    <div class="file-name" id="file_name"></div>
-    <button class="primary" id="convert" type="button">Create my CSV</button>
-    <div class="status" id="status" role="status" aria-live="polite"></div>
-    <p class="foot">The CSV includes due date, class, assignment name, type, and a checkbox column.</p>
-  </main>
-  <script type="module" src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
 </body>
 </html>

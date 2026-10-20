@@ -1,11 +1,10 @@
 {
-    "name": "Jacob Thole",
-    "description": "awesome syllabus to csv project",
-    "version": "1.1.0",
+    "name": "YOUR NAME HERE",
+    "description": "YOUR DESCRIPTION HERE",
+    "version": "1.0",
     "manifest_version": 3,
-    "permissions": ["storage"],
-    "host_permissions": ["https://api.anthropic.com/*"],
     "action": {
       "default_popup": "index.html"
     }
 }
+
