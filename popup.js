@@ -12,7 +12,10 @@ document.getElementById('file-upload').addEventListener('change', async () => {
     form.append('purpose', 'ocr');
     form.append('file', new File([fileUploaded], `${fileUploaded.name}`));  
 
-    let ocrJson = await PDFToJson(form);
+    const fileId = await PDFToJson(form);
+    const fileURL = await getURL(fileId);
+    const ocrJson = await OCRAPICall(fileURL);
+
 
     let markdownExport = "";
     for (const element of ocrJson.pages) {
@@ -20,10 +23,10 @@ document.getElementById('file-upload').addEventListener('change', async () => {
     }
 
     const geminiJson = await JsonToCSV(markdownExport);
-    const csvContent = geminiJson.candidates[0].content.parts[0].text;
+    let csvContent = geminiJson.candidates[0].content.parts[0].text;
     csvContent = csvContent.trim()
 
-    createFileAndDownload('downloadable.csv', geminiResponse.slice(6).slice(0, -3));
+    createFileAndDownload('downloadable.csv', csvContent.slice(6).slice(0, -3));
 });
 
 /**
@@ -52,8 +55,7 @@ async function getURL(fileId) {
             headers: {
                 "Accept": "application/json",
                 "Authorization": `Bearer ${mistralApiKey}`
-            },
-            body: form
+            }
         })
 
     const responseJSON = await response.json();
@@ -78,13 +80,13 @@ async function OCRAPICall(fileURL) {
     });
 
     const data = await OCRCall.json();
-
+    return data;
 }
 
 
 async function JsonToCSV(markdownExport) {
 
-    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiApiKey}`
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${geminiApiKey}`
 
     const prompt = `Extract all syllabus assignments and due dates from the provided text into a clean CSV format.
     Use the following exact column headers:
@@ -115,7 +117,8 @@ async function JsonToCSV(markdownExport) {
         })
     });
 
-    const data = await response.json();
+    const data = await convertCSV.json();
+    return data
 
 }
 
